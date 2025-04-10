@@ -6,7 +6,7 @@ const cells = document.querySelectorAll('.cell');
 const gameStatus = document.querySelector('.game-status');
 const multiplayerBtn = document.getElementById('multiplayer-btn');
 const botBtn = document.getElementById('bot-btn');
-const resetButton = document.getElementById('reset-button');
+const resetButton = document.getElementById('reset-button'); 
 
 // Padrões de vitória (linhas vencedoras)
 const winPatterns = [
