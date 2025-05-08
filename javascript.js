@@ -1,14 +1,21 @@
 let currentPlayer = 'X';
 let isGameActive = true;
 let gameMode = ''; // Pode ser 'multiplayer' ou 'bot'
+let difficulty = 'easy';
+let scoreX = 0;
+let scoreO = 0;
+
 let board = ['', '', '', '', '', '', '', '', ''];
 const cells = document.querySelectorAll('.cell');
 const gameStatus = document.querySelector('.game-status');
 const multiplayerBtn = document.getElementById('multiplayer-btn');
 const botBtn = document.getElementById('bot-btn');
-const resetButton = document.getElementById('reset-button'); 
+const resetButton = document.getElementById('reset-button');
+const difficultyContainer = document.getElementById('difficulty-container');
+const scoreXDisplay = document.getElementById('score-x');
+const scoreODisplay = document.getElementById('score-o');
+const difficultySelect = document.getElementById('difficulty');
 
-// Padrões de vitória (linhas vencedoras)
 const winPatterns = [
     [0, 1, 2],
     [3, 4, 5],
@@ -20,26 +27,32 @@ const winPatterns = [
     [2, 4, 6]
 ];
 
+function updateScoreboard() {
+    scoreXDisplay.textContent = scoreX;
+    scoreODisplay.textContent = scoreO;
+}
+
 function checkWinner() {
     for (const pattern of winPatterns) {
         const [a, b, c] = pattern;
         if (board[a] && board[a] === board[b] && board[a] === board[c]) {
             gameStatus.textContent = `Jogador ${board[a]} venceu!`;
             isGameActive = false;
-            resetButton.style.display = 'inline-block'; // Garante que o botão apareça
-            return; // Para a função para evitar que continue verificando empate
+            if (board[a] === 'X') scoreX++;
+            else if (board[a] === 'O') scoreO++;
+            updateScoreboard();
+            resetButton.style.display = 'inline-block';
+            return;
         }
     }
 
-    // Verifica empate somente se ninguém venceu
     if (!board.includes('') && isGameActive) {
         gameStatus.textContent = 'Empate!';
         isGameActive = false;
-        resetButton.style.display = 'inline-block'; // Garante que o botão apareça
+        resetButton.style.display = 'inline-block';
     }
 }
 
-// Função para reiniciar o jogo
 function resetGame() {
     board = ['', '', '', '', '', '', '', '', ''];
     isGameActive = true;
@@ -49,29 +62,29 @@ function resetGame() {
         cell.textContent = '';
     });
     gameStatus.textContent = `Jogador ${currentPlayer}, é sua vez!`;
-    // Esconder o botão de reset e mostrar os botões de modo
     resetButton.style.display = 'none';
     multiplayerBtn.style.display = 'inline-block';
     botBtn.style.display = 'inline-block';
+    difficultyContainer.style.display = 'none';
 }
 
-// Função para selecionar o modo de jogo
 function selectMode(mode) {
     gameMode = mode;
     isGameActive = true;
-    board = ['', '', '', '', '', '', '', '', '']; // Limpa o tabuleiro
+    board = ['', '', '', '', '', '', '', '', ''];
+    currentPlayer = 'X';
     cells.forEach(cell => {
         cell.classList.remove('X', 'O');
         cell.textContent = '';
     });
     gameStatus.textContent = `Jogador ${currentPlayer}, é sua vez!`;
-    // Esconde os botões de modo e exibe o botão de reset
     multiplayerBtn.style.display = 'none';
     botBtn.style.display = 'none';
     resetButton.style.display = 'inline-block';
+    difficultyContainer.style.display = (mode === 'bot') ? 'block' : 'none';
+    updateScoreboard();
 }
 
-// Função para fazer o movimento do jogador
 function makeMove(index) {
     if (!isGameActive || board[index] !== '') return;
 
@@ -81,31 +94,69 @@ function makeMove(index) {
 
     checkWinner();
 
-    // Alterna o jogador após a jogada
-    currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+    if (isGameActive) {
+        currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+        gameStatus.textContent = `Jogador ${currentPlayer}, é sua vez!`;
+    }
 
     if (gameMode === 'bot' && currentPlayer === 'O' && isGameActive) {
-        botMove(); // Faz o movimento do bot se for a vez do bot
+        setTimeout(botMove, 300); // Delay para parecer mais natural
     }
 }
 
-// Função para o movimento do bot (AI simples)
 function botMove() {
     let availableMoves = board.map((value, index) => value === '' ? index : null).filter(value => value !== null);
-    let randomMove = availableMoves[Math.floor(Math.random() * availableMoves.length)];
-    makeMove(randomMove);
+    let move;
+
+    if (difficulty === 'easy') {
+        move = availableMoves[Math.floor(Math.random() * availableMoves.length)];
+    } else {
+        move = null;
+
+        for (const pattern of winPatterns) {
+            const [a, b, c] = pattern;
+            const line = [board[a], board[b], board[c]];
+            const countO = line.filter(v => v === 'O').length;
+            const countEmpty = line.filter(v => v === '').length;
+
+            if (countO === 2 && countEmpty === 1) {
+                move = pattern.find(i => board[i] === '');
+                break;
+            }
+        }
+
+        if (move === null) {
+            for (const pattern of winPatterns) {
+                const [a, b, c] = pattern;
+                const line = [board[a], board[b], board[c]];
+                const countX = line.filter(v => v === 'X').length;
+                const countEmpty = line.filter(v => v === '').length;
+
+                if (countX === 2 && countEmpty === 1) {
+                    move = pattern.find(i => board[i] === '');
+                    break;
+                }
+            }
+        }
+
+        if (move === null) {
+            move = availableMoves[Math.floor(Math.random() * availableMoves.length)];
+        }
+    }
+
+    makeMove(move);
 }
 
-// Eventos de clique para as células
+// Eventos
 cells.forEach((cell, index) => {
     cell.addEventListener('click', () => {
         makeMove(index);
     });
 });
 
-// Evento de reinício
 resetButton.addEventListener('click', resetGame);
-
-// Selecionar modo de jogo
 multiplayerBtn.addEventListener('click', () => selectMode('multiplayer'));
 botBtn.addEventListener('click', () => selectMode('bot'));
+difficultySelect.addEventListener('change', (e) => {
+    difficulty = e.target.value;
+});
